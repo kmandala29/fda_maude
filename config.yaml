@@ -1,0 +1,22 @@
+openfda:
+  base_url: "https://api.fda.gov/device/event.json"
+  api_key: "${OPENFDA_API_KEY}"   # optional — higher rate limits with key; works without
+  page_limit: 1000                # max allowed per request
+  max_retries: 5
+  retry_backoff_seconds: 3
+
+extraction:
+  manufacturer: "becton dickinson"
+  date_from: "2023-01-01"
+  date_to:   "2025-12-31"
+
+databricks:
+  catalog: "main"
+  schema:  "fda_maude"
+  volume:  "raw_json"             # /Volumes/main/fda_maude/raw_json/
+  bronze_table: "maude_events_bronze"
+  silver_table: "maude_events_silver"
+  gold_table:   "bd_event_summary"
+
+logging:
+  level: INFO
