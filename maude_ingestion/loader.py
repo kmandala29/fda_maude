@@ -76,6 +76,14 @@ class VolumeLoader:
             return 0
 
         flat = [self._flatten(r) for r in records]
+        
+        # Use spark.createDataFrame with explicit type coercion for nullable fields
+        # Convert None values to empty strings for string fields to help schema inference
+        for row in flat:
+            for key, value in row.items():
+                if value is None:
+                    row[key] = ""  # Replace None with empty string
+        
         df = self.spark.createDataFrame(flat)
         full_table = f"{self.catalog}.{self.schema}.{self.bronze_table}"
 

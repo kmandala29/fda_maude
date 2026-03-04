@@ -15,31 +15,33 @@ dbutils.widgets.text("manufacturer", "becton dickinson")
 
 # COMMAND ----------
 
+# DBTITLE 1,Cell 3
 import sys, logging
-sys.path.insert(0, "/Workspace/Repos/fda_maude")
+import importlib
+sys.path.insert(0, "/Workspace/Users/koushik.mandala@databricks.com/fda_maude")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
+import maude_ingestion
+importlib.reload(maude_ingestion)  # Reload to pick up the extractor.py fix
 from maude_ingestion import MAUDEPipeline
 
 # Override config with widget values
-pipeline = MAUDEPipeline(config_path="/Workspace/Repos/fda_maude/config.yaml", spark=spark)
+pipeline = MAUDEPipeline(config_path="/Workspace/Users/koushik.mandala@databricks.com/fda_maude/config.yaml", spark=spark)
 pipeline.extractor.manufacturer = dbutils.widgets.get("manufacturer")
 pipeline.extractor.date_from    = dbutils.widgets.get("date_from").replace("-", "")
 pipeline.extractor.date_to      = dbutils.widgets.get("date_to").replace("-", "")
 
 # COMMAND ----------
-# MAGIC %md ## Dry run — count total records first
 
-total = pipeline.extractor.count_total()
-print(f"Total records to extract: {total:,}")
-
-# COMMAND ----------
-# MAGIC %md ## Run extraction
+# DBTITLE 1,Run extraction
+# Run extraction
 
 summary = pipeline.run()
 
 # COMMAND ----------
-# MAGIC %md ## Summary
+
+# DBTITLE 1,Display summary
+# Summary
 
 import pandas as pd
 

@@ -88,9 +88,11 @@ class MAUDEExtractor:
 
     def _build_search(self) -> str:
         # openFDA search syntax — manufacturer name + date range
-        manufacturer_q = f'manufacturer_g_name:"{self.manufacturer}"'
-        date_q = f"date_received:[{self.date_from}+TO+{self.date_to}]"
-        return f"{manufacturer_q}+AND+{date_q}"
+        # Use device.manufacturer_d_name (not manufacturer_g_name) for device-level manufacturer
+        # Note: Use spaces around AND/TO operators, + only within terms
+        manufacturer_q = f'device.manufacturer_d_name:{self.manufacturer.replace(" ", "+")}'
+        date_q = f"date_received:[{self.date_from} TO {self.date_to}]"
+        return f"{manufacturer_q} AND {date_q}"
 
     @retry(
         stop=stop_after_attempt(5),

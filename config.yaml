@@ -11,9 +11,9 @@ extraction:
   date_to:   "2025-12-31"
 
 databricks:
-  catalog: "main"
+  catalog: "bd_demo_kam"
   schema:  "fda_maude"
-  volume:  "raw_json"             # /Volumes/main/fda_maude/raw_json/
+  volume:  "maudedocs"             # /Volumes/main/fda_maude/raw_json/
   bronze_table: "maude_events_bronze"
   silver_table: "maude_events_silver"
   gold_table:   "bd_event_summary"

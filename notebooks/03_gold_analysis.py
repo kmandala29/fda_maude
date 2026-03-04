@@ -11,20 +11,28 @@
 # COMMAND ----------
 
 import sys
-sys.path.insert(0, "/Workspace/Repos/fda_maude")
+sys.path.insert(0, "/Workspace/Users/koushik.mandala@databricks.com/fda_maude")
 
 from pyspark.sql import functions as F
 
-CATALOG = "main"
+CATALOG = "bd_demo_kam"
 SCHEMA  = "fda_maude"
-GOLD    = "fda_maude"   # same schema, prefixed tables
+GOLD    = "fda_maude_gold"   # same schema, prefixed tables
 
 events     = spark.table(f"{CATALOG}.{SCHEMA}.maude_events_silver")
 devices    = spark.table(f"{CATALOG}.{SCHEMA}.maude_devices_silver")
 narratives = spark.table(f"{CATALOG}.{SCHEMA}.maude_narratives_silver")
 
 # COMMAND ----------
-# MAGIC %md ### 1. Event Summary — volume by type, year, month
+
+# DBTITLE 1,Create Gold Schema
+# Create Gold schema if it doesn't exist
+spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{GOLD}")
+print(f"Schema {CATALOG}.{GOLD} ready")
+
+# COMMAND ----------
+
+ ### 1. Event Summary — volume by type, year, month
 
 event_summary = (
     events
@@ -43,7 +51,8 @@ event_summary = (
 display(event_summary)
 
 # COMMAND ----------
-# MAGIC %md ### 2. Product Risk — adverse event rate by brand/generic name
+
+ ### 2. Product Risk — adverse event rate by brand/generic name
 
 product_risk = (
     events
@@ -71,7 +80,8 @@ product_risk = (
 display(product_risk.limit(20))
 
 # COMMAND ----------
-# MAGIC %md ### 3. Outcome Breakdown — patient outcomes distribution
+
+ ### 3. Outcome Breakdown — patient outcomes distribution
 
 from pyspark.sql.functions import from_json, explode_outer
 from pyspark.sql.types import ArrayType, StringType
@@ -111,7 +121,9 @@ outcome_breakdown = (
 display(outcome_breakdown)
 
 # COMMAND ----------
-# MAGIC %md ### 4. Flagged Narratives — keyword scan for high-risk terms
+
+# DBTITLE 1,Cell 6
+ ### 4. Flagged Narratives — keyword scan for high-risk terms
 
 HIGH_RISK_KEYWORDS = [
     "death", "died", "fatal", "deceased",
@@ -125,7 +137,9 @@ keyword_pattern = "|".join(HIGH_RISK_KEYWORDS)
 
 flagged_narratives = (
     narratives
-    .join(events.select("report_number", "date_received", "brand_name", "generic_name", "event_type"),
+    .join(events.select("report_number", 
+                        F.col("date_received").alias("event_date_received"),
+                        "brand_name", "generic_name", "event_type"),
           "report_number", "left")
     .withColumn("narrative_lower", F.lower("narrative_text"))
     .withColumn("matched_keywords",
@@ -141,7 +155,7 @@ flagged_narratives = (
     .filter(F.col("narrative_lower").rlike(keyword_pattern))
     .select(
         "report_number",
-        "date_received",
+        F.col("event_date_received").alias("date_received"),
         "brand_name",
         "generic_name",
         "event_type",
@@ -159,8 +173,10 @@ print(f"Flagged narratives: {flagged_narratives.count():,}")
 display(flagged_narratives.limit(20))
 
 # COMMAND ----------
-# MAGIC %md ## Gold Tables Summary
+
+# DBTITLE 1,Cell 7
+ ## Gold Tables Summary
 
 for t in ["bd_event_summary", "bd_product_risk", "bd_outcome_breakdown", "bd_narrative_flagged"]:
-    cnt = spark.table(f"{CATALOG}.{SCHEMA}.{t}").count()
+    cnt = spark.table(f"{CATALOG}.{GOLD}.{t}").count()
     print(f"  {t}: {cnt:,} rows")

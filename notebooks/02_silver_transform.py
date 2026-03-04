@@ -10,20 +10,23 @@
 # COMMAND ----------
 
 import sys
-sys.path.insert(0, "/Workspace/Repos/fda_maude")
+sys.path.insert(0, "/Workspace/Users/koushik.mandala@databricks.com/fda_maude")
+
 
 from pyspark.sql import functions as F
 from pyspark.sql.types import *
 from pyspark.sql.functions import from_json, explode_outer
 
-CATALOG = "main"
+CATALOG = "bd_demo_kam"
 SCHEMA  = "fda_maude"
 
 bronze = spark.table(f"{CATALOG}.{SCHEMA}.maude_events_bronze")
 print(f"Bronze rows: {bronze.count():,}")
 
 # COMMAND ----------
-# MAGIC %md ### 1. Events Silver — one row per report
+
+# DBTITLE 1,Cell 3
+ ### 1. Events Silver — one row per report
 
 events_silver = (
     bronze
@@ -32,9 +35,9 @@ events_silver = (
         "report_number",
         "mdr_report_key",
         "report_source_code",
-        F.to_date(F.col("date_received"), "yyyyMMdd").alias("date_received"),
-        F.to_date(F.col("date_of_event"), "yyyyMMdd").alias("date_of_event"),
-        F.to_date(F.col("date_report"),   "yyyyMMdd").alias("date_report"),
+        F.try_to_date(F.col("date_received"), "yyyyMMdd").alias("date_received"),
+        F.try_to_date(F.col("date_of_event"), "yyyyMMdd").alias("date_of_event"),
+        F.try_to_date(F.col("date_report"),   "yyyyMMdd").alias("date_report"),
         "event_type",
         "adverse_event_flag",
         "product_problem_flag",
@@ -70,7 +73,8 @@ events_silver = (
 print(f"Events silver: {events_silver.count():,} rows")
 
 # COMMAND ----------
-# MAGIC %md ### 2. Devices Silver — explode device array
+
+ ### 2. Devices Silver — explode device array
 
 device_schema = ArrayType(StructType([
     StructField("brand_name",                   StringType()),
@@ -113,7 +117,9 @@ devices_silver = (
 print(f"Devices silver: {devices_silver.count():,} rows")
 
 # COMMAND ----------
-# MAGIC %md ### 3. Narratives Silver — explode mdr_text array
+
+# DBTITLE 1,Cell 5
+ ### 3. Narratives Silver — explode mdr_text array
 
 narrative_schema = ArrayType(StructType([
     StructField("text_type_code", StringType()),
@@ -127,7 +133,7 @@ narratives_silver = (
     .withColumn("text_block", explode_outer("text_array"))
     .select(
         "report_number",
-        F.to_date(F.col("date_received"), "yyyyMMdd").alias("date_received"),
+        F.try_to_date(F.col("date_received"), "yyyyMMdd").alias("date_received"),
         F.col("text_block.text_type_code").alias("text_type_code"),
         F.col("text_block.foi_text").alias("narrative_text"),
         F.col("text_block.mdr_text_key").alias("mdr_text_key"),
@@ -144,7 +150,9 @@ narratives_silver = (
 print(f"Narratives silver: {narratives_silver.count():,} rows")
 
 # COMMAND ----------
-# MAGIC %md ## Silver Tables Summary
+
+# DBTITLE 1,Silver Tables Summary
+# Silver Tables Summary
 
 for t in ["maude_events_silver", "maude_devices_silver", "maude_narratives_silver"]:
     cnt = spark.table(f"{CATALOG}.{SCHEMA}.{t}").count()
